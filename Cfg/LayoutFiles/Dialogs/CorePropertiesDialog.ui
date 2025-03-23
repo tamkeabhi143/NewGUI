@@ -71,6 +71,10 @@ QGroupBox::title {
     color: #f0f0f0;
 }
 
+QCheckBox {
+    color: #f0f0f0;
+}
+
 QDialogButtonBox {
     background-color: #1e1e1e;
     border-top: 1px solid #505050;

@@ -1,0 +1,62 @@
+{
+    "core_info": {
+        "core_name": "Core2",
+        "description": "Default core configuration",
+        "image_types": [
+            "SMP"
+        ],
+        "socs": [
+            "Aurix"
+        ],
+        "cores": {
+            "Aurix": [
+                "Core0",
+                "Core1",
+                "Core2"
+            ]
+        },
+        "core_properties": {
+            "Aurix": {
+                "Core0": {
+                    "description": "CPU0",
+                    "is_autosar_compliant": true,
+                    "is_master_core": true,
+                    "is_qnx_core": false,
+                    "is_simulation_core": false,
+                    "name": "Core0",
+                    "os_type": "AUTOSAR",
+                    "soc_family": "Tricore"
+                },
+                "Core1": {
+                    "description": "CPU1",
+                    "is_autosar_compliant": true,
+                    "is_master_core": false,
+                    "is_qnx_core": false,
+                    "is_simulation_core": false,
+                    "name": "Core1",
+                    "os_type": "AUTOSAR",
+                    "soc_family": "Tricore"
+                },
+                "Core2": {
+                    "description": "CPU2",
+                    "is_autosar_compliant": true,
+                    "is_master_core": false,
+                    "is_qnx_core": false,
+                    "is_simulation_core": false,
+                    "name": "Core2",
+                    "os_type": "AUTOSAR",
+                    "soc_family": "Tricore"
+                }
+            }
+        },
+        "boards": [
+            "DCU"
+        ]
+    },
+    "version": {
+        "number": "",
+        "date": "2000-01-01 00:00:00",
+        "updated_by": "Admin",
+        "change_description": "TestChanges"
+    }
+}

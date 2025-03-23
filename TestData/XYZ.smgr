@@ -1,0 +1,51 @@
+{
+    "core_info": {
+        "core_name": "MCu1_0",
+        "description": "Default core configuration",
+        "image_types": [
+            "MultiImage"
+        ],
+        "socs": [
+            "Sitara"
+        ],
+        "cores": {
+            "Sitara": [
+                "AM53",
+                "MCu1_0"
+            ]
+        },
+        "core_properties": {
+            "Sitara": {
+                "AM53": {
+                    "description": "QNX Core",
+                    "is_autosar_compliant": false,
+                    "is_master_core": false,
+                    "is_qnx_core": true,
+                    "is_simulation_core": false,
+                    "name": "AM53",
+                    "os_type": "QNX",
+                    "soc_family": "TI"
+                },
+                "MCu1_0": {
+                    "description": "Autosar Core",
+                    "is_autosar_compliant": true,
+                    "is_master_core": true,
+                    "is_qnx_core": false,
+                    "is_simulation_core": false,
+                    "name": "MCu1_0",
+                    "os_type": "AUTOSAR",
+                    "soc_family": "Tricore"
+                }
+            }
+        },
+        "boards": [
+            "DCu1"
+        ]
+    },
+    "version": {
+        "number": "",
+        "date": "2000-01-01 00:00:00",
+        "updated_by": "Admin",
+        "change_description": "TestChanges"
+    }
+}

@@ -9,6 +9,7 @@ Handles menu-related operations and actions
 from PyQt5.QtWidgets import QAction, QMenu, QMessageBox, QFileDialog
 from PyQt5.QtGui import QIcon
 import os
+from Utils.path_utils import get_resource_path
 
 class MenuOperations:
     """Handles menu operations for the Signal Manager application"""
@@ -21,6 +22,45 @@ class MenuOperations:
             main_window: The main application window
         """
         self.main_window = main_window
+
+    def setup(self):
+        """
+        Set up all menus for the application
+        
+        This method should be called once during application initialization
+        to create and configure all menus.
+        """
+        # Find the menubar
+        menubar = self.main_window.menuBar
+        if not menubar:
+            print("Warning: MenuBar not found in main window")
+            return
+            
+        # Create each menu
+        self.create_file_menu(menubar)
+        self.create_edit_menu(menubar)
+        self.create_code_generator_menu(menubar)
+        self.create_help_menu(menubar)
+        
+        # Connect code generator actions if not already connected
+        self.connect_code_generator_actions()
+        
+    def connect_code_generator_actions(self):
+        """Connect actions for the Code Generator menu"""
+        # Find code generator actions
+        signal_mgr_action = self.main_window.findChild(QAction, "actionSignalMgr")
+        ipc_manager_action = self.main_window.findChild(QAction, "actionIpcManager")
+        ipc_ov_eth_mgr_action = self.main_window.findChild(QAction, "actionIpcOvEthMgr")
+        
+        # Connect to handler methods if they exist
+        if signal_mgr_action and hasattr(self.main_window, "on_signal_mgr_generator"):
+            signal_mgr_action.triggered.connect(self.main_window.on_signal_mgr_generator)
+            
+        if ipc_manager_action and hasattr(self.main_window, "on_ipc_manager_generator"):
+            ipc_manager_action.triggered.connect(self.main_window.on_ipc_manager_generator)
+            
+        if ipc_ov_eth_mgr_action and hasattr(self.main_window, "on_ipc_ov_eth_mgr_generator"):
+            ipc_ov_eth_mgr_action.triggered.connect(self.main_window.on_ipc_ov_eth_mgr_generator)
     
     def create_file_menu(self, menubar):
         """
@@ -35,14 +75,14 @@ class MenuOperations:
         file_menu = menubar.addMenu("File")
         
         # New action
-        new_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "new.png")), "New", self.main_window)
+        new_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\NewFile.png')), "New", self.main_window)
         new_action.setShortcut("Ctrl+N")
         new_action.setStatusTip("Create a new signal configuration")
         new_action.triggered.connect(self.main_window.on_new)
         file_menu.addAction(new_action)
         
         # Open action
-        open_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "open.png")), "Open", self.main_window)
+        open_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\OpenFile.png')), "Open", self.main_window)
         open_action.setShortcut("Ctrl+O")
         open_action.setStatusTip("Open an existing signal configuration")
         open_action.triggered.connect(self.main_window.on_open)
@@ -51,14 +91,14 @@ class MenuOperations:
         file_menu.addSeparator()
         
         # Save action
-        save_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "save.png")), "Save", self.main_window)
+        save_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\Save.png')), "Save", self.main_window)
         save_action.setShortcut("Ctrl+S")
         save_action.setStatusTip("Save the current signal configuration")
         save_action.triggered.connect(self.main_window.on_save)
         file_menu.addAction(save_action)
         
         # Save As action
-        save_as_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "save.png")), "Save As", self.main_window)
+        save_as_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\SaveAs.png')), "Save As", self.main_window)
         save_as_action.setShortcut("Ctrl+Shift+S")
         save_as_action.setStatusTip("Save the current signal configuration with a new name")
         save_as_action.triggered.connect(self.main_window.on_save_as)
@@ -67,13 +107,13 @@ class MenuOperations:
         file_menu.addSeparator()
         
         # Export to Excel action
-        export_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "export.png")), "Export To Excel", self.main_window)
+        export_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\ExportToExcel.png')), "Export To Excel", self.main_window)
         export_action.setStatusTip("Export the current configuration to Excel")
         export_action.triggered.connect(self.main_window.on_export_to_excel)
         file_menu.addAction(export_action)
         
         # Import from Excel action
-        import_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "import.png")), "Import From Excel", self.main_window)
+        import_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\Import.png')), "Import From Excel", self.main_window)
         import_action.setStatusTip("Import configuration from Excel")
         import_action.triggered.connect(self.main_window.on_import_from_excel)
         file_menu.addAction(import_action)
@@ -81,7 +121,7 @@ class MenuOperations:
         file_menu.addSeparator()
         
         # Close action
-        close_action = QAction("Close", self.main_window)
+        close_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\Close.png')), "Close", self.main_window)
         close_action.setShortcut("Ctrl+W")
         close_action.setStatusTip("Close the current configuration")
         close_action.triggered.connect(self.main_window.on_close)
@@ -90,7 +130,7 @@ class MenuOperations:
         file_menu.addSeparator()
         
         # Exit action
-        exit_action = QAction("Exit", self.main_window)
+        exit_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\Exit.png')), "Exit", self.main_window)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.setStatusTip("Exit the application")
         exit_action.triggered.connect(self.main_window.close)
@@ -111,14 +151,14 @@ class MenuOperations:
         edit_menu = menubar.addMenu("Edit")
         
         # Add Entry action
-        add_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "add.png")), "Add Entry", self.main_window)
+        add_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\NewAdd.png')), "Add Entry", self.main_window)
         add_action.setShortcut("Ctrl+A")
         add_action.setStatusTip("Add a new signal entry")
         add_action.triggered.connect(self.main_window.on_add_entry)
         edit_menu.addAction(add_action)
         
         # Delete Entry action
-        delete_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "delete.png")), "Delete Entry", self.main_window)
+        delete_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\NewDelete.png')), "Delete Entry", self.main_window)
         delete_action.setShortcut("Delete")
         delete_action.setStatusTip("Delete the selected signal entry")
         delete_action.triggered.connect(self.main_window.on_delete_entry)
@@ -127,7 +167,7 @@ class MenuOperations:
         edit_menu.addSeparator()
         
         # Update Entry action
-        update_action = QAction(QIcon(os.path.join("Cfg", "Resources", "icons", "edit.png")), "Update Entry", self.main_window)
+        update_action = QAction(QIcon(get_resource_path('Cfg\\Resources\\icons\\UpdateEntry.png')), "Update Entry", self.main_window)
         update_action.setShortcut("Ctrl+U")
         update_action.setStatusTip("Update the selected signal entry")
         update_action.triggered.connect(self.main_window.on_update_entry)
