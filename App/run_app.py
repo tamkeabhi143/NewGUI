@@ -2,79 +2,108 @@
 # -*- coding: utf-8 -*-
 
 """
-Signal Manager Application Launcher
-Runs the main Signal Manager application
+Signal Manager Run Script
 """
+
 import sys
 import os
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-if parent_dir not in sys.path:
-    sys.path.append(parent_dir)
-
-from pathlib import Path
 import argparse
 
 def main():
     """Main application entry point"""
-    parser = argparse.ArgumentParser(description="Signal Manager Application")
-    parser.add_argument("--demo", action="store_true", help="Run the dialog integration demo")
-    parser.add_argument("--core-config", action="store_true", help="Run the Core Configuration Manager")
-    
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Signal Manager')
+    parser.add_argument('--demo', action='store_true', help='Run dialog integration demo')
+    parser.add_argument('--core-config', action='store_true', help='Run Core Configuration Manager')
     args = parser.parse_args()
     
-    # Add the project root directory to sys.path
-    project_root = Path(__file__).parent
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
-    
-    # Import required modules
-    try:
-        from PyQt5.QtWidgets import QApplication
-        from PyQt5.QtCore import Qt
-    except ImportError:
-        print("Error: PyQt5 is not installed. Please install it with:")
-        print("pip install PyQt5")
-        sys.exit(1)
-    
-    # Create the application
-    app = QApplication(sys.argv)
-    app.setApplicationName("Signal Manager")
-    app.setApplicationVersion("1.0.0")
+    # Import PyQt5 here to avoid the need for the module when just checking version
+    from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout
+    from PyQt5.QtCore import Qt
+    from PyQt5 import uic
     
     # Enable High DPI scaling
-    app.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-    app.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
     
-    # Load and apply stylesheet
-    style_path = os.path.join(project_root,"..\\", "Cfg", "Resources", "styles", "dark_theme.qss")
+    # Create application
+    app = QApplication(sys.argv)
+    app.setStyle('Fusion')  # Use Fusion style for a consistent look across platforms
+    
+    # Set application properties
+    app.setApplicationName("Signal Manager")
+    app.setApplicationVersion("1.0.0")
+    app.setOrganizationName("Your Organization")
+    app.setOrganizationDomain("yourorganization.com")
+    
+    # Add resource directories to Python path
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    parent_dir = os.path.dirname(current_dir)
+    resources_dir = os.path.join(parent_dir, "Cfg", "Resources")
+    dialogs_dir = os.path.join(parent_dir, "Cfg", "LayoutFiles", "Dialogs")
+    
+    # Load and apply stylesheet if available
+    style_path = os.path.join(resources_dir, "styles", "dark_theme.qss")
     if os.path.exists(style_path):
         with open(style_path, "r") as f:
             app.setStyleSheet(f.read())
     else:
-        print(f"Warning: Style file not found at {style_path}")
+        print(f"Warning: Dark theme stylesheet not found at {style_path}")
     
     # Determine which UI to show
     if args.demo:
         # Run dialog integration demo
-        from Cfg.Dialogs.dialog_integration import DialogIntegrationDemo
-        main_window = DialogIntegrationDemo()
+        dialog_integration_ui = os.path.join(dialogs_dir, "DialogIntegration.ui")
+        main_window = QWidget()
+        uic.loadUi(dialog_integration_ui, main_window)
+        
+        # Set the window title
+        main_window.setWindowTitle("Signal Manager - Dialog Integration Demo")
+        
     elif args.core_config:
         # Run Core Configuration Manager
-        from PyQt5.QtWidgets import QMainWindow
-        from Cfg.Dialogs.core_config_manager import CoreConfigManager
-        
+        core_config_ui = os.path.join(dialogs_dir, "CoreConfigManager.ui")
         main_window = QMainWindow()
-        main_window.setWindowTitle("Core Configuration Manager")
-        main_window.resize(900, 650)
         
-        core_config = CoreConfigManager()
+        # Set window properties
+        main_window.setWindowTitle("Signal Manager - Core Configuration")
+        main_window.setMinimumSize(900, 650)
+        
+        # Load the UI into a central widget
+        core_config = QWidget()
+        uic.loadUi(core_config_ui, core_config)
         main_window.setCentralWidget(core_config)
+        
     else:
         # Run main Signal Manager application
-        from Cfg.Dialogs.signal_manager_app import SignalManagerApp
-        main_window = SignalManagerApp()
+        signal_manager_ui = os.path.join(parent_dir, "Cfg", "LayoutFiles", "signal_manager_app.ui")
+        main_window = QMainWindow()
+        uic.loadUi(signal_manager_ui, main_window)
+        
+        # Connect navigation buttons to switch between pages
+        content_stack = main_window.findChild(QWidget, "content_stack")
+        nav_button0 = main_window.findChild(QWidget, "navButton0")
+        nav_button1 = main_window.findChild(QWidget, "navButton1")
+        nav_button2 = main_window.findChild(QWidget, "navButton2")
+        
+        # Connect navigation buttons to switch pages
+        if content_stack and nav_button0 and nav_button1 and nav_button2:
+            nav_button0.clicked.connect(lambda: content_stack.setCurrentIndex(0))
+            nav_button1.clicked.connect(lambda: content_stack.setCurrentIndex(1))
+            nav_button2.clicked.connect(lambda: content_stack.setCurrentIndex(2))
+            
+            # Ensure button states update correctly when clicked
+            nav_button0.clicked.connect(lambda: nav_button0.setChecked(True))
+            nav_button0.clicked.connect(lambda: nav_button1.setChecked(False))
+            nav_button0.clicked.connect(lambda: nav_button2.setChecked(False))
+            
+            nav_button1.clicked.connect(lambda: nav_button0.setChecked(False))
+            nav_button1.clicked.connect(lambda: nav_button1.setChecked(True))
+            nav_button1.clicked.connect(lambda: nav_button2.setChecked(False))
+            
+            nav_button2.clicked.connect(lambda: nav_button0.setChecked(False))
+            nav_button2.clicked.connect(lambda: nav_button1.setChecked(False))
+            nav_button2.clicked.connect(lambda: nav_button2.setChecked(True))
     
     # Show the window
     main_window.show()

@@ -2,19 +2,30 @@
     <qresource prefix="/">
         <file>styles/dark_theme.qss</file>
         <file>icons/add.png</file>
-        <file>icons/delete.png</file>
-        <file>icons/edit.png</file>
-        <file>icons/new.png</file>
-        <file>icons/open.png</file>
-        <file>icons/save.png</file>
-        <file>icons/export.png</file>
-        <file>icons/import.png</file>
-        <file>icons/search.png</file>
-        <file>icons/settings.png</file>
-        <file>icons/core.png</file>
-        <file>icons/database.png</file>
-        <file>icons/project.png</file>
-        <file>icons/code.png</file>
-        <file>icons/dropdown-arrow.png</file>
+        <file>icons/About.png</file>
+        <file>icons/AddEntry.png</file>
+        <file>icons/AppIcon.png</file>
+        <file>icons/Close.png</file>
+        <file>icons/Copy.png</file>
+        <file>icons/CoreConfiguration.png</file>
+        <file>icons/Cut.png</file>
+        <file>icons/Exit.png</file>
+        <file>icons/ExportToExcel.png</file>
+        <file>icons/Import.png</file>
+        <file>icons/License.png</file>
+        <file>icons/NewAdd.png</file>
+        <file>icons/NewDelete.png</file>
+        <file>icons/NewFile.png</file>
+        <file>icons/OpenFile.png</file>
+        <file>icons/Paste.png</file>
+        <file>icons/ProjectConfiguration.png</file>
+        <file>icons/Redo.png</file>
+        <file>icons/RemoveEntry.png</file>
+        <file>icons/Save.png</file>
+        <file>icons/SaveAs.png</file>
+        <file>icons/SiganlDataBase.png</file>
+        <file>icons/Undo.png</file>
+        <file>icons/UpdateEntry.png</file>
+        <file>icons/User.png</file>
     </qresource>
 </RCC>

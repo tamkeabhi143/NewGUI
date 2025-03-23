@@ -15,9 +15,12 @@ parent_dir = os.path.dirname(current_dir)
 if parent_dir not in sys.path:
     sys.path.append(parent_dir)
 
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget
 from PyQt5.QtCore import QFile, QTextStream, Qt
-from signal_manager_app import SignalManagerApp
+from PyQt5 import uic
+
+# Import the compiled resources module
+import Cfg.Resources.resources_rc
 
 def load_stylesheet(resource_path):
     """Load the stylesheet from the given resource path"""
@@ -57,8 +60,29 @@ def main():
     else:
         print(f"Warning: Stylesheet file not found at {style_path}")
     
-    # Create and show the main window
-    main_window = SignalManagerApp()
+    # Create and show the main window by loading the UI file directly
+    main_window = QMainWindow()
+    ui_path = os.path.join(base_dir, 'Cfg', 'LayoutFiles', 'signal_manager_app.ui')
+    try:
+        uic.loadUi(ui_path, main_window)
+        
+        # Get the stacked widget and its pages
+        stack_widget = main_window.findChild(QWidget, "content_stack")
+        
+        # Connect navigation buttons
+        nav_button0 = main_window.findChild(QWidget, "navButton0")
+        nav_button1 = main_window.findChild(QWidget, "navButton1")
+        nav_button2 = main_window.findChild(QWidget, "navButton2")
+        
+        # Connect signals to switch stacked widget pages
+        nav_button0.clicked.connect(lambda: stack_widget.setCurrentIndex(0))
+        nav_button1.clicked.connect(lambda: stack_widget.setCurrentIndex(1))
+        nav_button2.clicked.connect(lambda: stack_widget.setCurrentIndex(2))
+        
+    except Exception as e:
+        print(f"Error loading UI file: {str(e)}")
+        return 1
+    
     main_window.show()
     
     # Run the application event loop

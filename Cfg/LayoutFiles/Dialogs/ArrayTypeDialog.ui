@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ArrayTypeDialog</class>
+ <widget class="QDialog" name="ArrayTypeDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>400</width>
+    <height>300</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Array Type Configuration</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* Dark theme stylesheet */
+QDialog, QWidget {
+    background-color: #1e1e1e;
+    color: #f0f0f0;
+}
+
+QLabel {
+    color: #f0f0f0;
+}
+
+QFrame {
+    background-color: #2d2d2d;
+    border-radius: 5px;
+}
+
+QPushButton {
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+
+QPushButton:hover {
+    background-color: #0b5ed7;
+}
+
+QPushButton:pressed {
+    background-color: #0a58ca;
+}
+
+QLineEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    background-color: #363636;
+    border: 1px solid #505050;
+    color: #f0f0f0;
+    padding: 4px;
+    border-radius: 3px;
+}
+
+QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border: 1px solid #0d6efd;
+}
+
+QDialogButtonBox {
+    background-color: #1e1e1e;
+    border-top: 1px solid #505050;
+    padding-top: 15px;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QFormLayout" name="formLayout">
+     <item row="0" column="0">
+      <widget class="QLabel" name="element_type_label">
+       <property name="text">
+        <string>Array Type</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QComboBox" name="type_combo">
+       <item>
+        <property name="text">
+         <string>bool_t</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>uint8</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>uint16</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>uint32</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>uint64</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>sint8</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>sint16</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>sint32</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>sint64</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>char_t</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>float32</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>float64</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item row="1" column="0">
+      <widget class="QLabel" name="array_size_label">
+       <property name="text">
+        <string>Array Size:</string>
+       </property>
+      </widget>
+     </item>
+     <item row="1" column="1">
+      <widget class="QSpinBox" name="size_spin">
+       <property name="minimum">
+        <number>1</number>
+       </property>
+       <property name="maximum">
+        <number>10000</number>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QDialogButtonBox" name="buttonBox">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

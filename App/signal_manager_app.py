@@ -13,12 +13,15 @@ from PyQt5.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
                             QDateTimeEdit, QPlainTextEdit, QTableWidget, 
                             QHeaderView, QAbstractItemView, QMessageBox,
                             QFileDialog, QGraphicsDropShadowEffect, QCheckBox,
-                            QTableWidgetItem)
-from PyQt5.QtCore import Qt, QSize, QDateTime, QSettings, pyqtSignal, QEvent
-from PyQt5.QtGui import QIcon, QColor, QResizeEvent, QCloseEvent, QPixmap
+                            QTableWidgetItem, QStatusBar, QAction, QTreeWidget,
+                            QTreeWidgetItem)
+from PyQt5.QtCore import Qt, QSize, QDateTime, QSettings, pyqtSignal, QEvent, QRegExp
+from PyQt5.QtGui import QIcon, QColor, QResizeEvent, QCloseEvent, QPixmap, QStandardItem
+from PyQt5 import uic  # Import uic for loading UI files
 
 # Import modules
 from Modules.FileOperation.file_operations import FileOperations
+from Modules.Dialogs.SignalDetailsDialog import SignalDetailsDialog
 
 class SignalManagerApp(QMainWindow):
     """Main application window for Signal Manager"""
@@ -35,8 +38,10 @@ class SignalManagerApp(QMainWindow):
         self.current_file_path = ""
         self.has_unsaved_changes = False
         self.project_data = {}
+        self.recent_files = []
+        self.max_recent_files = 5
         
-        # Set up UI
+        # Load UI from file
         self.setup_ui()
         
         # Connect signals and slots
@@ -49,632 +54,96 @@ class SignalManagerApp(QMainWindow):
         self.update_window_title()
     
     def setup_ui(self):
-        """Set up the user interface"""
-        # Set window properties
-        self.setWindowTitle("Signal Manager")
-        self.setMinimumSize(1000, 700)
+        """Load and set up the user interface from UI file"""
+        # Load UI file
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        parent_dir = os.path.dirname(current_dir)
+        ui_file_path = os.path.join(parent_dir, "Cfg", "LayoutFiles", "signal_manager_app.ui")
+        uic.loadUi(ui_file_path, self)
         
-        # Create central widget and main layout
-        self.central_widget = QWidget()
-        self.main_layout = QHBoxLayout(self.central_widget)
-        self.main_layout.setContentsMargins(0, 0, 0, 0)
-        self.main_layout.setSpacing(0)
-        self.setCentralWidget(self.central_widget)
-        
-        # Set up the sidebar navigation
-        self.setup_sidebar()
-        
-        # Create content stack
-        self.content_stack = QStackedWidget()
-        self.content_stack.setObjectName("contentStack")
-        
-        # Create content pages
-        self.setup_core_config_page()
-        self.setup_project_config_page()
-        self.setup_signal_database_page()
-        self.setup_code_generator_page()
-        self.setup_settings_page()
-        
-        # Add content stack to main layout
-        self.main_layout.addWidget(self.content_stack)
-        
-        # Set up the menu bar
-        self.setup_menu_bar()
-        
-        # Set up the tool bar
-        self.setup_tool_bar()
-        
-        # Set up the status bar
-        self.statusBar().showMessage("Ready")
-    
-    def setup_sidebar(self):
-        """Set up the sidebar navigation"""
-        # Create sidebar widget
-        self.sidebar_widget = QWidget()
-        self.sidebar_widget.setObjectName("sidebarWidget")
-        self.sidebar_widget.setFixedWidth(220)
-        
-        # Create sidebar layout
-        self.sidebar_layout = QVBoxLayout(self.sidebar_widget)
-        self.sidebar_layout.setContentsMargins(10, 20, 10, 20)
-        self.sidebar_layout.setSpacing(5)
-        
-        # App title
-        self.title_label = QLabel("Signal Manager")
-        self.title_label.setObjectName("appTitle")
-        self.sidebar_layout.addWidget(self.title_label)
-        
-        # Navigation buttons
+        # Get references to important widgets from loaded UI
+        self.content_stack = self.findChild(QStackedWidget, "content_stack")
         self.nav_buttons = []
-        nav_items = [
-            "Core Configuration", 
-            "Project Config", 
-            "Signal Database", 
-            "Code Generator", 
-            "Settings"
-        ]
         
-        for i, item in enumerate(nav_items):
-            nav_button = QPushButton(item)
-            nav_button.setCheckable(True)
-            nav_button.setObjectName(f"navButton{i}")
-            
-            # Connect button click to page change
-            nav_button.clicked.connect(lambda checked, idx=i: self.set_active_page(idx))
-            
-            self.sidebar_layout.addWidget(nav_button)
-            self.nav_buttons.append(nav_button)
+        # Get navigation buttons
+        nav_buttons_layout = self.findChild(QVBoxLayout, "nav_buttons_layout")
+        if nav_buttons_layout:
+            for i in range(nav_buttons_layout.count()):
+                widget = nav_buttons_layout.itemAt(i).widget()
+                if isinstance(widget, QPushButton) and widget.objectName().startswith("navButton"):
+                    self.nav_buttons.append(widget)
         
-        # Set the first button as active by default
-        if self.nav_buttons:
-            self.nav_buttons[0].setChecked(True)
+        # Create and load project config page
+        project_config_ui_path = os.path.join(parent_dir, "Cfg", "LayoutFiles", "project_config.ui")
+        project_config_widget = QWidget()
+        uic.loadUi(project_config_ui_path, project_config_widget)
         
-        # Add spacer to push profile to bottom
-        self.sidebar_layout.addStretch()
+        # Create and load signal database page
+        signal_db_ui_path = os.path.join(parent_dir, "Cfg", "LayoutFiles", "signal_database.ui")
+        signal_db_widget = QWidget()
+        uic.loadUi(signal_db_ui_path, signal_db_widget)
         
-        # Add user profile section
-        profile_layout = QHBoxLayout()
+        # Get existing pages or create new ones if needed
+        page_project_config = self.content_stack.widget(1)
+        page_signal_database = self.content_stack.widget(2)
         
-        profile_icon = QLabel()
-        profile_icon.setFixedSize(32, 32)
-        profile_icon.setObjectName("profileIcon")
+        # If the pages exist, clear and update them; otherwise add new pages
+        if page_project_config:
+            # Remove existing page and replace with new one
+            self.content_stack.removeWidget(page_project_config)
+            self.content_stack.insertWidget(1, project_config_widget)
         
-        profile_name = QLabel("User Profile")
-        profile_name.setObjectName("profileName")
+        if page_signal_database:
+            # Remove existing page and replace with new one
+            self.content_stack.removeWidget(page_signal_database)
+            self.content_stack.insertWidget(2, signal_db_widget)
         
-        profile_layout.addWidget(profile_icon)
-        profile_layout.addWidget(profile_name)
-        profile_layout.addStretch()
+        # Set up dynamic elements not defined in UI file
+        self.setup_shadow_effects()
         
-        self.sidebar_layout.addLayout(profile_layout)
+        # Set up the FAB button position
+        self.update_fab_position()
         
-        # Add sidebar to main layout
-        self.main_layout.addWidget(self.sidebar_widget)
+        # Initialize status bar - check if statusBar is a method or object
+        try:
+            # Try to access it as a method first
+            if callable(self.statusBar):
+                sb = self.statusBar()
+                sb.showMessage("Ready")
+            else:
+                # If it's not callable, try to find it as an object
+                sb = self.findChild(QStatusBar, "statusBar")
+                if sb:
+                    sb.showMessage("Ready")
+        except (TypeError, AttributeError):
+            # If all else fails, just create a new status bar
+            print("Warning: Could not set status bar message")
     
-    def create_card(self, title=""):
-        """Create a styled card frame with title"""
-        card = QFrame()
-        card.setObjectName("card")
-        
-        # Create shadow effect
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(10)
-        shadow.setColor(QColor(0, 0, 0, 60))
-        shadow.setOffset(0, 2)
-        card.setGraphicsEffect(shadow)
-        
-        # Create layout for card
-        card_layout = QVBoxLayout(card)
-        card_layout.setContentsMargins(15, 15, 15, 15)
-        
-        # Add title if provided
-        if title:
-            title_layout = QHBoxLayout()
-            
-            title_label = QLabel(title)
-            title_label.setObjectName("cardTitle")
-            title_layout.addWidget(title_label)
-            title_layout.addStretch()
-            
-            card_layout.addLayout(title_layout)
-            
-            # Add separator line
-            line = QFrame()
-            line.setFrameShape(QFrame.HLine)
-            line.setFrameShadow(QFrame.Sunken)
-            line.setObjectName("cardDivider")
-            
-            card_layout.addWidget(line)
-            card_layout.addSpacing(10)
-        
-        return card, card_layout
+    def setup_shadow_effects(self):
+        """Add shadow effects to cards"""
+        card_frames = self.findChildren(QFrame, QRegExp(".*_card$"))
+        for card in card_frames:
+            shadow = QGraphicsDropShadowEffect()
+            shadow.setBlurRadius(10)
+            shadow.setColor(QColor(0, 0, 0, 60))
+            shadow.setOffset(0, 2)
+            card.setGraphicsEffect(shadow)
     
-    def setup_core_config_page(self):
-        """Set up the Core Configuration page"""
-        page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(20, 20, 20, 20)
-        page_layout.setSpacing(20)
-        
-        # Top bar with search and actions
-        top_bar_layout = QHBoxLayout()
-        
-        # Search field
-        search_field = QLineEdit()
-        search_field.setPlaceholderText("Search configurations...")
-        search_field.setFixedHeight(36)
-        
-        # Action buttons
-        new_button = QPushButton("New")
-        new_button.setIcon(QIcon(os.path.join("Cfg", "Resources", "icons", "new.png")))
-        
-        import_button = QPushButton("Import")
-        import_button.setIcon(QIcon(os.path.join("Cfg", "Resources", "icons", "import.png")))
-        
-        top_bar_layout.addWidget(search_field)
-        top_bar_layout.addStretch()
-        top_bar_layout.addWidget(new_button)
-        top_bar_layout.addWidget(import_button)
-        
-        page_layout.addLayout(top_bar_layout)
-        
-        # Content cards layout
-        cards_layout = QHBoxLayout()
-        cards_layout.setSpacing(20)
-        
-        # Core Info Card
-        core_info_card, core_info_layout = self.create_card("SOC Core Information")
-        
-        # Add form fields
-        core_form = QFormLayout()
-        core_form.setSpacing(15)
-        
-        core_id_field = QLineEdit()
-        version_field = QLineEdit()
-        config_type_combo = QComboBox()
-        config_type_combo.addItems(["Standard", "Extended", "Custom"])
-        
-        core_form.addRow("Core ID:", core_id_field)
-        core_form.addRow("Version:", version_field)
-        core_form.addRow("Configuration Type:", config_type_combo)
-        
-        core_info_layout.addLayout(core_form)
-        cards_layout.addWidget(core_info_card)
-        
-        # Version Details Card
-        version_card, version_layout = self.create_card("Version Details")
-        
-        version_form = QFormLayout()
-        version_form.setSpacing(15)
-        
-        version_number_field = QLineEdit()
-        version_date_field = QDateTimeEdit(QDateTime.currentDateTime())
-        updated_by_field = QLineEdit()
-        change_desc_field = QPlainTextEdit()
-        change_desc_field.setMaximumHeight(80)
-        
-        version_form.addRow("Version Number:", version_number_field)
-        version_form.addRow("Date:", version_date_field)
-        version_form.addRow("Updated By:", updated_by_field)
-        version_form.addRow("Change Description:", change_desc_field)
-        
-        version_layout.addLayout(version_form)
-        cards_layout.addWidget(version_card)
-        
-        page_layout.addLayout(cards_layout, 1)
-        
-        # Action buttons
-        action_layout = QHBoxLayout()
-        action_layout.setContentsMargins(0, 10, 0, 0)
-        
-        update_button = QPushButton("Update Configuration")
-        update_button.setMinimumWidth(150)
-        
-        reset_button = QPushButton("Reset")
-        reset_button.setMinimumWidth(150)
-        reset_button.setProperty("class", "secondary")
-        
-        action_layout.addStretch()
-        action_layout.addWidget(update_button)
-        action_layout.addWidget(reset_button)
-        action_layout.addStretch()
-        
-        page_layout.addLayout(action_layout)
-        
-        # Status table
-        status_card, status_layout = self.create_card("Configuration Status")
-        
-        status_table = QTableWidget(4, 5)
-        status_table.setHorizontalHeaderLabels(["ID", "Name", "Status", "Last Updated", "Actions"])
-        status_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        status_table.verticalHeader().setVisible(False)
-        status_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        status_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        status_table.setAlternatingRowColors(True)
-        
-        # Sample data for the table
-        sample_data = [
-            {"id": "001", "name": "Core Configuration A", "status": "Active", "date": "2023-10-15"},
-            {"id": "002", "name": "Core Configuration B", "status": "Inactive", "date": "2023-09-20"},
-            {"id": "003", "name": "Core Configuration C", "status": "Draft", "date": "2023-10-05"},
-            {"id": "004", "name": "Core Configuration D", "status": "Active", "date": "2023-10-12"},
-        ]
-        
-        # Add data to the table
-        for row, item in enumerate(sample_data):
-            # ID
-            status_table.setItem(row, 0, QTableWidgetItem(item["id"]))
-            # Name
-            status_table.setItem(row, 1, QTableWidgetItem(item["name"]))
-            
-            # Status (with custom widget and styling)
-            status_widget = QWidget()
-            status_layout_cell = QHBoxLayout(status_widget)
-            status_layout_cell.setContentsMargins(5, 2, 5, 2)
-            status_layout_cell.setAlignment(Qt.AlignCenter)
-            
-            status_label = QLabel(item["status"])
-            status_label.setAlignment(Qt.AlignCenter)
-            
-            # Style based on status
-            status_class = "StatusActive" if item["status"] == "Active" else \
-                          "StatusInactive" if item["status"] == "Inactive" else \
-                          "StatusDraft"
-            status_label.setProperty("class", status_class)
-            
-            status_layout_cell.addWidget(status_label)
-            status_table.setCellWidget(row, 2, status_widget)
-            
-            # Date
-            status_table.setItem(row, 3, QTableWidgetItem(item["date"]))
-            
-            # Actions (with button widgets)
-            actions_widget = QWidget()
-            actions_layout = QHBoxLayout(actions_widget)
-            actions_layout.setContentsMargins(5, 2, 5, 2)
-            actions_layout.setAlignment(Qt.AlignCenter)
-            
-            edit_button = QPushButton()
-            edit_button.setIcon(QIcon(os.path.join("Cfg", "Resources", "icons", "edit.png")))
-            edit_button.setFixedSize(24, 24)
-            edit_button.setProperty("class", "editButton")
-            
-            delete_button = QPushButton()
-            delete_button.setIcon(QIcon(os.path.join("Cfg", "Resources", "icons", "delete.png")))
-            delete_button.setFixedSize(24, 24)
-            delete_button.setProperty("class", "deleteButton")
-            
-            actions_layout.addWidget(edit_button)
-            actions_layout.addWidget(delete_button)
-            
-            status_table.setCellWidget(row, 4, actions_widget)
-        
-        status_layout.addWidget(status_table)
-        page_layout.addWidget(status_card, 2)
-        
-        # Add floating action button
-        fab_button = QPushButton("+")
-        fab_button.setObjectName("fabButton")
-        fab_button.setFixedSize(56, 56)
-        
-        # Set up position attributes for fab_button
-        fab_button._parent_widget = page
-        
-        # Position FAB at bottom right of the page
-        self.position_fab(fab_button, page)
-        
-        # Connect FAB to add entry action
-        fab_button.clicked.connect(self.on_add_entry)
-        
-        # Add page to stack
-        self.content_stack.addWidget(page)
-    
-    def setup_project_config_page(self):
-        """Set up the Project Configuration page"""
-        page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(20, 20, 20, 20)
-        
-        # Page header
-        page_label = QLabel("Project Configuration")
-        page_label.setObjectName("pageTitle")
-        page_layout.addWidget(page_label)
-        
-        # API Configuration Card
-        api_card, api_layout = self.create_card("API Configuration")
-        
-        # API Form placeholder
-        api_layout.addWidget(QLabel("API configuration settings will be shown here"))
-        
-        # Path Configuration Card
-        path_card, path_layout = self.create_card("Path Configuration")
-        
-        # Output path
-        output_path_layout = QHBoxLayout()
-        output_path_label = QLabel("Choose Output Directory:")
-        output_path_line_edit = QLineEdit()
-        output_path_button = QPushButton("Browse...")
-        
-        output_path_layout.addWidget(output_path_label)
-        output_path_layout.addWidget(output_path_line_edit, 1)
-        output_path_layout.addWidget(output_path_button)
-        
-        # Script path
-        script_path_layout = QHBoxLayout()
-        script_path_label = QLabel("Choose Scripts Directory:")
-        script_path_line_edit = QLineEdit()
-        script_path_button = QPushButton("Browse...")
-        
-        script_path_layout.addWidget(script_path_label)
-        script_path_layout.addWidget(script_path_line_edit, 1)
-        script_path_layout.addWidget(script_path_button)
-        
-        path_layout.addLayout(output_path_layout)
-        path_layout.addLayout(script_path_layout)
-        
-        # Add cards to layout
-        page_layout.addWidget(api_card)
-        page_layout.addWidget(path_card)
-        page_layout.addStretch()
-        
-        # Add page to stack
-        self.content_stack.addWidget(page)
-    
-    def setup_signal_database_page(self):
-        """Set up the Signal Database page"""
-        page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(20, 20, 20, 20)
-        
-        # Signal Database Layout
-        signal_db_layout = QHBoxLayout()
-        
-        # Signal Entry Frame
-        signal_entry_card, signal_entry_layout = self.create_card("Signal Names")
-        signal_entry_card.setMinimumWidth(400)
-        signal_entry_layout.addWidget(QLabel("Signal list will appear here"))
-        
-        # Signal Details Frame
-        signal_details_card, signal_details_layout = self.create_card("Signal Details")
-        signal_details_card.setMinimumWidth(400)
-        signal_details_layout.addWidget(QLabel("Signal details will appear here"))
-        
-        # Add frames to layout
-        signal_db_layout.addWidget(signal_entry_card)
-        signal_db_layout.addWidget(signal_details_card)
-        page_layout.addLayout(signal_db_layout, 1)
-        
-        # Board selector layout
-        selector_layout = QHBoxLayout()
-        
-        board_list_combo = QComboBox()
-        board_list_combo.setMinimumWidth(200)
-        board_list_combo.addItems(["Board 1", "Board 2", "Board 3"])
-        
-        soc_list_combo = QComboBox()
-        soc_list_combo.setMinimumWidth(200)
-        soc_list_combo.addItems(["SOC 1", "SOC 2", "SOC 3"])
-        
-        build_image_combo = QComboBox()
-        build_image_combo.setMinimumWidth(200)
-        build_image_combo.addItems(["Build Image 1", "Build Image 2", "Build Image 3"])
-        
-        selector_layout.addWidget(board_list_combo)
-        selector_layout.addStretch()
-        selector_layout.addWidget(soc_list_combo)
-        selector_layout.addStretch()
-        selector_layout.addWidget(build_image_combo)
-        
-        page_layout.addLayout(selector_layout)
-        
-        # Add page to stack
-        self.content_stack.addWidget(page)
-    
-    def setup_code_generator_page(self):
-        """Set up the Code Generator page"""
-        page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(20, 20, 20, 20)
-        
-        page_label = QLabel("Code Generator")
-        page_label.setObjectName("pageTitle")
-        page_layout.addWidget(page_label)
-        
-        # Code Generator options
-        generator_card, generator_layout = self.create_card("Generator Options")
-        
-        generator_type_combo = QComboBox()
-        generator_type_combo.addItems(["SignalMgr", "IpcManager", "IpcOvEthMgr"])
-        
-        generator_form = QFormLayout()
-        generator_form.addRow("Generator Type:", generator_type_combo)
-        
-        output_path_line_edit = QLineEdit()
-        browse_button = QPushButton("Browse...")
-        path_layout = QHBoxLayout()
-        path_layout.addWidget(output_path_line_edit)
-        path_layout.addWidget(browse_button)
-        
-        generator_form.addRow("Output Path:", path_layout)
-        
-        generator_layout.addLayout(generator_form)
-        
-        # Generate Button
-        generate_button = QPushButton("Generate Code")
-        generate_button.setMinimumWidth(200)
-        
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        button_layout.addWidget(generate_button)
-        button_layout.addStretch()
-        
-        # Add to main layout
-        page_layout.addWidget(generator_card)
-        page_layout.addLayout(button_layout)
-        page_layout.addStretch()
-        
-        # Add page to stack
-        self.content_stack.addWidget(page)
-    
-    def setup_settings_page(self):
-        """Set up the Settings page"""
-        page = QWidget()
-        page_layout = QVBoxLayout(page)
-        page_layout.setContentsMargins(20, 20, 20, 20)
-        
-        page_label = QLabel("Settings")
-        page_label.setObjectName("pageTitle")
-        page_layout.addWidget(page_label)
-        
-        # Appearance settings
-        appearance_card, appearance_layout = self.create_card("Appearance")
-        
-        dark_mode_checkbox = QCheckBox("Dark Mode")
-        dark_mode_checkbox.setChecked(True)
-        
-        appearance_layout.addWidget(dark_mode_checkbox)
-        
-        # Default paths
-        default_paths_card, paths_layout = self.create_card("Default Paths")
-        
-        paths_form = QFormLayout()
-        
-        project_path_line_edit = QLineEdit()
-        project_path_button = QPushButton("Browse...")
-        project_path_layout = QHBoxLayout()
-        project_path_layout.addWidget(project_path_line_edit)
-        project_path_layout.addWidget(project_path_button)
-        
-        output_path_line_edit = QLineEdit()
-        output_path_button = QPushButton("Browse...")
-        output_path_layout = QHBoxLayout()
-        output_path_layout.addWidget(output_path_line_edit)
-        output_path_layout.addWidget(output_path_button)
-        
-        paths_form.addRow("Default Project Path:", project_path_layout)
-        paths_form.addRow("Default Output Path:", output_path_layout)
-        
-        paths_layout.addLayout(paths_form)
-        
-        # Save settings button
-        save_button = QPushButton("Save Settings")
-        
-        # Add to layout
-        page_layout.addWidget(appearance_card)
-        page_layout.addWidget(default_paths_card)
-        page_layout.addStretch()
-        page_layout.addWidget(save_button, 0, Qt.AlignCenter)
-        
-        # Add page to stack
-        self.content_stack.addWidget(page)
-    
-    def setup_menu_bar(self):
-        """Set up the application menu bar"""
-        # File Menu
-        file_menu = self.menuBar().addMenu("File")
-        
-        self.action_new = file_menu.addAction("New")
-        self.action_new.triggered.connect(self.on_new)
-        
-        self.action_open = file_menu.addAction("Open")
-        self.action_open.triggered.connect(self.on_open)
-        
-        file_menu.addSeparator()
-        
-        self.action_save = file_menu.addAction("Save")
-        self.action_save.triggered.connect(self.on_save)
-        
-        self.action_save_as = file_menu.addAction("Save As")
-        self.action_save_as.triggered.connect(self.on_save_as)
-        
-        file_menu.addSeparator()
-        
-        self.action_export_to_excel = file_menu.addAction("Export To Excel")
-        self.action_export_to_excel.triggered.connect(self.on_export_to_excel)
-        
-        self.action_import_from_excel = file_menu.addAction("Import From Excel")
-        self.action_import_from_excel.triggered.connect(self.on_import_from_excel)
-        
-        file_menu.addSeparator()
-        
-        self.action_close = file_menu.addAction("Close")
-        self.action_close.triggered.connect(self.on_close)
-        
-        file_menu.addSeparator()
-        
-        self.action_exit = file_menu.addAction("Exit")
-        self.action_exit.triggered.connect(self.close)
-        
-        # Edit Menu
-        edit_menu = self.menuBar().addMenu("Edit")
-        
-        self.action_add_entry = edit_menu.addAction("Add Entry")
-        self.action_add_entry.triggered.connect(self.on_add_entry)
-        
-        self.action_delete_entry = edit_menu.addAction("Delete Entry")
-        self.action_delete_entry.triggered.connect(self.on_delete_entry)
-        
-        edit_menu.addSeparator()
-        
-        self.action_update_entry = edit_menu.addAction("Update Entry")
-        self.action_update_entry.triggered.connect(self.on_update_entry)
-        
-        # Code Generator Menu
-        code_generator_menu = self.menuBar().addMenu("Code Generator")
-        
-        self.action_signal_mgr = code_generator_menu.addAction("SignalMgr")
-        self.action_ipc_manager = code_generator_menu.addAction("IpcManager")
-        self.action_ipc_ov_eth_mgr = code_generator_menu.addAction("IpcOvEthMgr")
-        
-        # Help Menu
-        help_menu = self.menuBar().addMenu("Help")
-        
-        self.action_about_tool = help_menu.addAction("About Tool")
-        self.action_license = help_menu.addAction("License")
-    
-    def setup_tool_bar(self):
-        """Set up the application tool bar"""
-        tool_bar = self.addToolBar("Main")
-        
-        # Add common actions to toolbar
-        tool_bar.addAction(self.action_new)
-        tool_bar.addAction(self.action_open)
-        tool_bar.addSeparator()
-        tool_bar.addAction(self.action_save)
-        tool_bar.addAction(self.action_save_as)
-        tool_bar.addSeparator()
-        tool_bar.addAction(self.action_export_to_excel)
-        tool_bar.addAction(self.action_import_from_excel)
-        tool_bar.addSeparator()
-        tool_bar.addAction(self.action_add_entry)
-        tool_bar.addAction(self.action_delete_entry)
-        tool_bar.addAction(self.action_update_entry)
-    
-    def set_active_page(self, index):
-        """Set the active page in the content stack"""
-        # Update button states
-        for i, button in enumerate(self.nav_buttons):
-            button.setChecked(i == index)
-        
-        # Switch page in stack
-        self.content_stack.setCurrentIndex(index)
-    
-    def position_fab(self, fab_button, parent_widget):
-        """Position the floating action button in the bottom-right corner"""
-        if hasattr(parent_widget, 'width') and hasattr(parent_widget, 'height'):
-            fab_button.setParent(parent_widget)
-            fab_button.move(parent_widget.width() - 76, parent_widget.height() - 76)
+    def update_fab_position(self):
+        """Position the floating action button in the bottom-right corner of its parent"""
+        # Find FAB button if it exists
+        fab_button = self.findChild(QPushButton, "fabButton")
+        if fab_button:
+            page = fab_button.parent()
+            if page:
+                fab_button.move(page.width() - 76, page.height() - 76)
     
     def resizeEvent(self, event):
         """Handle resize events for the main window"""
         super().resizeEvent(event)
         
-        # Find all floating action buttons and reposition them
-        for page_idx in range(self.content_stack.count()):
-            page = self.content_stack.widget(page_idx)
-            for child in page.findChildren(QPushButton):
-                if child.objectName() == "fabButton" and hasattr(child, "_parent_widget"):
-                    self.position_fab(child, child._parent_widget)
+        # Update FAB position on resize
+        self.update_fab_position()
         
         # Emit resized signal
         self.resized.emit()
@@ -689,8 +158,130 @@ class SignalManagerApp(QMainWindow):
     
     def connect_signals_slots(self):
         """Connect signals and slots for the application"""
-        # Connect any additional signals and slots here
-        pass
+        # Connect navigation buttons
+        for i, button in enumerate(self.nav_buttons):
+            button.clicked.connect(lambda checked, idx=i: self.set_active_page(idx))
+        
+        # Connect file menu actions
+        # New action
+        action_new = self.findChild(QAction, "actionNew")
+        if action_new:
+            action_new.setShortcut("Ctrl+N")
+            action_new.setStatusTip("Create a new signal configuration")
+            action_new.triggered.connect(self.on_new)
+        
+        # Open action
+        action_open = self.findChild(QAction, "actionOpen")
+        if action_open:
+            action_open.setShortcut("Ctrl+O")
+            action_open.setStatusTip("Open an existing signal configuration")
+            action_open.triggered.connect(self.on_open)
+        
+        # Save action
+        action_save = self.findChild(QAction, "actionSave")
+        if action_save:
+            action_save.setShortcut("Ctrl+S")
+            action_save.setStatusTip("Save the current signal configuration")
+            action_save.triggered.connect(self.on_save)
+        
+        # Save As action
+        action_save_as = self.findChild(QAction, "actionSave_As")
+        if action_save_as:
+            action_save_as.setShortcut("Ctrl+Shift+S")
+            action_save_as.setStatusTip("Save the current signal configuration with a new name")
+            action_save_as.triggered.connect(self.on_save_as)
+        
+        # Export to Excel action
+        action_export_to_excel = self.findChild(QAction, "actionExport_To_Excel")
+        if action_export_to_excel:
+            action_export_to_excel.setShortcut("Ctrl+E")
+            action_export_to_excel.setStatusTip("Export the current configuration to Excel")
+            action_export_to_excel.triggered.connect(self.on_export_to_excel)
+        
+        # Import from Excel action
+        action_import_from_excel = self.findChild(QAction, "actionImport_From_Excel")
+        if action_import_from_excel:
+            action_import_from_excel.setShortcut("Ctrl+I")
+            action_import_from_excel.setStatusTip("Import configuration from Excel")
+            action_import_from_excel.triggered.connect(self.on_import_from_excel)
+        
+        # Close action
+        action_close = self.findChild(QAction, "actionClose")
+        if action_close:
+            action_close.setShortcut("Ctrl+W")
+            action_close.setStatusTip("Close the current configuration")
+            action_close.triggered.connect(self.on_close)
+        
+        # Exit action
+        action_exit = self.findChild(QAction, "actionExit")
+        if action_exit:
+            action_exit.setShortcut("Ctrl+Q")
+            action_exit.setStatusTip("Exit the application")
+            action_exit.triggered.connect(self.close)
+        
+        # Set up recent files menu if it exists
+        self.setup_recent_files_menu()
+        
+        # Connect edit menu actions
+        action_add_entry = self.findChild(QAction, "actionAdd_Entry")
+        if action_add_entry:
+            action_add_entry.setShortcut("Ctrl+A")
+            action_add_entry.setStatusTip("Add a new entry")
+            action_add_entry.triggered.connect(self.on_add_entry)
+        
+        action_delete_entry = self.findChild(QAction, "actionDelete_Entry")
+        if action_delete_entry:
+            action_delete_entry.setShortcut("Delete")
+            action_delete_entry.setStatusTip("Delete the selected entry")
+            action_delete_entry.triggered.connect(self.on_delete_entry)
+        
+        action_update_entry = self.findChild(QAction, "actionUpdate_Entry")
+        if action_update_entry:
+            action_update_entry.setShortcut("F2")
+            action_update_entry.setStatusTip("Update the selected entry")
+            action_update_entry.triggered.connect(self.on_update_entry)
+        
+        # Connect Code Generator menu actions
+        action_signal_mgr = self.findChild(QAction, "actionSignalMgr")
+        if action_signal_mgr:
+            action_signal_mgr.setStatusTip("Generate SignalMgr code")
+            action_signal_mgr.triggered.connect(self.on_signal_mgr_generator)
+        
+        action_ipc_manager = self.findChild(QAction, "actionIpcManager")
+        if action_ipc_manager:
+            action_ipc_manager.setStatusTip("Generate IpcManager code")
+            action_ipc_manager.triggered.connect(self.on_ipc_manager_generator)
+        
+        action_ipc_ov_eth_mgr = self.findChild(QAction, "actionIpcOvEthMgr")
+        if action_ipc_ov_eth_mgr:
+            action_ipc_ov_eth_mgr.setStatusTip("Generate IpcOvEthMgr code")
+            action_ipc_ov_eth_mgr.triggered.connect(self.on_ipc_ov_eth_mgr_generator)
+        
+        # Connect Help menu actions
+        action_about_tool = self.findChild(QAction, "actionAbout_Tool")
+        if action_about_tool:
+            action_about_tool.setShortcut("F1")
+            action_about_tool.setStatusTip("Show information about Signal Manager")
+            action_about_tool.triggered.connect(self.on_about_tool)
+        
+        action_license = self.findChild(QAction, "actionLicense")
+        if action_license:
+            action_license.setStatusTip("Show license information")
+            action_license.triggered.connect(self.on_license)
+        
+        # Connect FAB button if it exists
+        fab_button = self.findChild(QPushButton, "fabButton")
+        if fab_button:
+            fab_button.clicked.connect(self.on_add_entry)
+    
+    def set_active_page(self, index):
+        """Set the active page in the content stack"""
+        # Update button states
+        for i, button in enumerate(self.nav_buttons):
+            button.setChecked(i == index)
+        
+        # Switch page in stack
+        self.content_stack.setCurrentIndex(index)
     
     # File menu actions
     def on_new(self):
@@ -714,9 +305,9 @@ class SignalManagerApp(QMainWindow):
     def on_save(self):
         """Save the current project"""
         if not self.current_file_path:
-            self.on_save_as()
+            return self.on_save_as()
         else:
-            self.save_project(self.current_file_path)
+            return self.save_project(self.current_file_path)
     
     def on_save_as(self):
         """Save the current project as a new file"""
@@ -730,7 +321,8 @@ class SignalManagerApp(QMainWindow):
         if file_path:
             if not file_path.endswith(".smgr"):
                 file_path += ".smgr"
-            self.save_project(file_path)
+            return self.save_project(file_path)
+        return False
     
     def on_export_to_excel(self):
         """Export the current project data to Excel"""
@@ -748,8 +340,11 @@ class SignalManagerApp(QMainWindow):
             # Export data to Excel
             if self.file_operations.export_to_excel(file_path, self.project_data):
                 QMessageBox.information(self, "Export Successful", f"Data was successfully exported to {file_path}")
+                return True
             else:
                 QMessageBox.warning(self, "Export Failed", f"Failed to export data to {file_path}")
+                return False
+        return False
     
     def on_import_from_excel(self):
         """Import project data from Excel"""
@@ -775,26 +370,244 @@ class SignalManagerApp(QMainWindow):
                 self.update_window_title()
                 
                 QMessageBox.information(self, "Import Successful", f"Data was successfully imported from {file_path}")
+                return True
             else:
                 QMessageBox.warning(self, "Import Failed", f"Failed to import data from {file_path}")
+                return False
+        return False
     
     def on_close(self):
         """Close the current project"""
         if self.maybe_save():
             self.new_project()
+            return True
+        return False
     
     # Edit menu actions
     def on_add_entry(self):
-        """Add a new entry to the project"""
-        QMessageBox.information(self, "Add Entry", "Add Entry functionality to be implemented")
+        """Handler for add entry menu action"""
+        # Create a new signal with default data
+        default_signal_data = {
+            "name": "New_Signal",
+            "variable_port_name": "",
+            "data_type": "UINT32",
+            "memory_region": "Default",
+            "type": "Input",
+            "init_value": "Default",
+            "asil": "QM",
+            "buffer_count_ipc": 1,
+            "impl_approach": "Default",
+            "get_obj_ref": False,
+            "notifiers": False,
+            "sm_buff_count": 1,
+            "timeout": 0,
+            "periodicity": 0,
+            "checksum": "None",
+            "source_core": "Default"
+        }
+        
+        # Open the dialog
+        signal_data = SignalDetailsDialog.get_signal_details(self, default_signal_data)
+        
+        # If the user clicked OK, add the signal to the model
+        if signal_data:
+            self.add_signal_to_model(signal_data)
+            self.statusBar().showMessage(f"Added signal: {signal_data['name']}", 3000)
+
+    def add_signal_to_model(self, signal_data):
+        """Add a signal to the model
+        
+        Args:
+            signal_data: Dictionary with signal data
+        """
+        # Get the current model
+        model = self.signal_tree.model()
+        if not model:
+            return
+        
+        # Create parent item for the signal
+        parent_item = QStandardItem(signal_data["name"])
+        parent_item.setData(signal_data, Qt.UserRole)
+        
+        # Add child items for important properties
+        variable_port_name_item = QStandardItem("Variable Port: " + signal_data.get("variable_port_name", ""))
+        data_type_item = QStandardItem("Data Type: " + signal_data.get("data_type", ""))
+        memory_region_item = QStandardItem("Memory Region: " + signal_data.get("memory_region", ""))
+        
+        # Add items to parent
+        parent_item.appendRow(variable_port_name_item)
+        parent_item.appendRow(data_type_item)
+        parent_item.appendRow(memory_region_item)
+        
+        # Add parent item to model
+        model.appendRow(parent_item)
+        
+        # Expand the item
+        index = model.indexFromItem(parent_item)
+        self.signal_tree.expand(index)
+        
+        # Select the item
+        self.signal_tree.setCurrentIndex(index)
     
     def on_delete_entry(self):
-        """Delete an entry from the project"""
-        QMessageBox.information(self, "Delete Entry", "Delete Entry functionality to be implemented")
+        """Handler for delete entry menu action"""
+        # Get the selected item
+        index = self.signal_tree.currentIndex()
+        if not index.isValid():
+            QMessageBox.warning(self, "No Selection", "Please select a signal to delete.")
+            return
+        
+        # Get the model
+        model = self.signal_tree.model()
+        if not model:
+            return
+        
+        # Get the item
+        item = model.itemFromIndex(index)
+        if not item:
+            return
+        
+        # If the item is a child item, get the parent item
+        if item.parent():
+            item = item.parent()
+            index = item.index()
+        
+        # Get the signal name
+        signal_name = item.text()
+        
+        # Confirm deletion
+        reply = QMessageBox.question(
+            self,
+            "Confirm Deletion",
+            f"Are you sure you want to delete the signal '{signal_name}'?",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No
+        )
+        
+        if reply == QMessageBox.Yes:
+            # Remove the item from the model
+            model.removeRow(index.row(), index.parent())
+            self.statusBar().showMessage(f"Deleted signal: {signal_name}", 3000)
     
     def on_update_entry(self):
-        """Update an existing entry"""
-        QMessageBox.information(self, "Update Entry", "Update Entry functionality to be implemented")
+        """Handler for update entry menu action"""
+        # Get the selected item
+        index = self.signal_tree.currentIndex()
+        if not index.isValid():
+            QMessageBox.warning(self, "No Selection", "Please select a signal to update.")
+            return
+        
+        # Get the model
+        model = self.signal_tree.model()
+        if not model:
+            return
+        
+        # Get the item and its data
+        item = model.itemFromIndex(index)
+        if not item:
+            return
+        
+        # If the item is a child item, get the parent item
+        if item.parent():
+            item = item.parent()
+            index = item.index()
+        
+        # Get the signal data
+        signal_data = item.data(Qt.UserRole)
+        if not signal_data:
+            QMessageBox.warning(self, "No Data", "The selected item has no signal data.")
+            return
+        
+        # Open the dialog
+        updated_signal_data = SignalDetailsDialog.get_signal_details(self, signal_data)
+        
+        # If the user clicked OK, update the signal in the model
+        if updated_signal_data:
+            self.update_signal_in_model(index, updated_signal_data)
+            self.statusBar().showMessage(f"Updated signal: {updated_signal_data['name']}", 3000)
+
+    def update_signal_in_model(self, index, signal_data):
+        """Update a signal in the model
+        
+        Args:
+            index: The index of the signal to update
+            signal_data: Dictionary with updated signal data
+        """
+        # Get the model
+        model = self.signal_tree.model()
+        if not model:
+            return
+        
+        # Get the item
+        item = model.itemFromIndex(index)
+        if not item:
+            return
+        
+        # Update the item
+        item.setText(signal_data["name"])
+        item.setData(signal_data, Qt.UserRole)
+        
+        # Remove all child items
+        item.removeRows(0, item.rowCount())
+        
+        # Add child items for important properties
+        variable_port_name_item = QStandardItem("Variable Port: " + signal_data.get("variable_port_name", ""))
+        data_type_item = QStandardItem("Data Type: " + signal_data.get("data_type", ""))
+        memory_region_item = QStandardItem("Memory Region: " + signal_data.get("memory_region", ""))
+        
+        # Add items to parent
+        item.appendRow(variable_port_name_item)
+        item.appendRow(data_type_item)
+        item.appendRow(memory_region_item)
+        
+        # Expand the item
+        self.signal_tree.expand(index)
+        
+        # Select the item
+        self.signal_tree.setCurrentIndex(index)
+    
+    # Code Generator menu actions
+    def on_signal_mgr_generator(self):
+        """Generate SignalMgr code"""
+        QMessageBox.information(self, "SignalMgr Generator", "SignalMgr Generator functionality to be implemented")
+    
+    def on_ipc_manager_generator(self):
+        """Generate IpcManager code"""
+        QMessageBox.information(self, "IpcManager Generator", "IpcManager Generator functionality to be implemented")
+    
+    def on_ipc_ov_eth_mgr_generator(self):
+        """Generate IpcOvEthMgr code"""
+        QMessageBox.information(self, "IpcOvEthMgr Generator", "IpcOvEthMgr Generator functionality to be implemented")
+    
+    # Help menu actions
+    def on_about_tool(self):
+        """Show About dialog"""
+        about_text = """
+        <h2>Signal Manager</h2>
+        <p>Version 1.0.0</p>
+        <p>A tool for managing signal configurations for embedded systems.</p>
+        <p>&copy; 2023 Your Organization</p>
+        """
+        QMessageBox.about(self, "About Signal Manager", about_text)
+    
+    def on_license(self):
+        """Show License dialog"""
+        license_text = """
+        Signal Manager - Signal configuration tool for embedded systems
+        
+        Copyright (C) 2023 Your Organization
+        
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+        
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+        """
+        QMessageBox.information(self, "License", license_text)
     
     # Project management
     def new_project(self):
@@ -827,6 +640,9 @@ class SignalManagerApp(QMainWindow):
             self.has_unsaved_changes = False
             self.update_window_title()
             
+            # Add to recent files
+            self.add_recent_file(file_path)
+            
             QMessageBox.information(self, "Load Successful", f"Project was successfully loaded from {file_path}")
             return True
         else:
@@ -848,6 +664,9 @@ class SignalManagerApp(QMainWindow):
             self.has_unsaved_changes = False
             self.update_window_title()
             
+            # Add to recent files
+            self.add_recent_file(file_path)
+            
             QMessageBox.information(self, "Save Successful", f"Project was successfully saved to {file_path}")
             return True
         else:
@@ -856,15 +675,87 @@ class SignalManagerApp(QMainWindow):
     
     def update_data_from_ui(self):
         """Update project data from UI elements"""
-        # TODO: Collect data from UI and update project_data
+        # Version Details Card
+        version_number_field = self.findChild(QLineEdit, "version_number_field")
+        version_date_field = self.findChild(QDateTimeEdit, "version_date_field")
+        updated_by_field = self.findChild(QLineEdit, "updated_by_field")
+        change_desc_field = self.findChild(QPlainTextEdit, "change_desc_field")
+        
+        # Update project data with form values
+        if "version" not in self.project_data:
+            self.project_data["version"] = {}
+            
+        if version_number_field:
+            self.project_data["version"]["number"] = version_number_field.text()
+        
+        if version_date_field:
+            self.project_data["version"]["date"] = version_date_field.dateTime().toString("yyyy-MM-dd hh:mm:ss")
+        
+        if updated_by_field:
+            self.project_data["version"]["updated_by"] = updated_by_field.text()
+        
+        if change_desc_field:
+            self.project_data["version"]["change_description"] = change_desc_field.toPlainText()
+        
+        # Handle Core Info Tree if it exists
+        core_info_tree = self.findChild(QTreeWidget, "CoreInfoTreeObj")
+        if core_info_tree:
+            # Here you would implement the logic to extract data from the tree widget
+            # This is a placeholder for the actual implementation
+            pass
+        
         # Mark as having unsaved changes
         self.has_unsaved_changes = True
         self.update_window_title()
     
     def update_ui_from_data(self):
         """Update UI elements from project data"""
-        # TODO: Update UI with data from project_data
-        pass
+        # Version Details Card
+        version_number_field = self.findChild(QLineEdit, "version_number_field")
+        version_date_field = self.findChild(QDateTimeEdit, "version_date_field")
+        updated_by_field = self.findChild(QLineEdit, "updated_by_field")
+        change_desc_field = self.findChild(QPlainTextEdit, "change_desc_field")
+        
+        # Update form values from project data
+        if "version" in self.project_data:
+            if version_number_field and "number" in self.project_data["version"]:
+                version_number_field.setText(self.project_data["version"]["number"])
+            
+            if version_date_field and "date" in self.project_data["version"]:
+                date_time = QDateTime.fromString(self.project_data["version"]["date"], "yyyy-MM-dd hh:mm:ss")
+                if date_time.isValid():
+                    version_date_field.setDateTime(date_time)
+            
+            if updated_by_field and "updated_by" in self.project_data["version"]:
+                updated_by_field.setText(self.project_data["version"]["updated_by"])
+            
+            if change_desc_field and "change_description" in self.project_data["version"]:
+                change_desc_field.setPlainText(self.project_data["version"]["change_description"])
+        
+        # Handle Core Info Tree if it exists
+        core_info_tree = self.findChild(QTreeWidget, "CoreInfoTreeObj")
+        if core_info_tree:
+            # Here you would implement the logic to populate the tree widget from data
+            # This is a placeholder for the actual implementation
+            core_info_tree.clear()
+            # Set column headers
+            core_info_tree.setHeaderLabels(["Property", "Value"])
+            # Example of populating tree (adjust based on your data structure)
+            if "core_info" in self.project_data:
+                self.populate_tree(core_info_tree, self.project_data["core_info"])
+    
+    def populate_tree(self, tree_widget, data_dict, parent_item=None):
+        """Recursively populate a tree widget from a dictionary"""
+        for key, value in data_dict.items():
+            if parent_item:
+                item = QTreeWidgetItem(parent_item, [str(key), ""])
+            else:
+                item = QTreeWidgetItem(tree_widget, [str(key), ""])
+            
+            if isinstance(value, dict):
+                self.populate_tree(tree_widget, value, item)
+            else:
+                item.setText(1, str(value))
     
     def update_window_title(self):
         """Update the window title to reflect current project and save state"""
@@ -891,7 +782,7 @@ class SignalManagerApp(QMainWindow):
         )
         
         if reply == QMessageBox.Save:
-            return self.on_save(), True
+            return self.on_save()
         elif reply == QMessageBox.Cancel:
             return False
         
@@ -911,6 +802,19 @@ class SignalManagerApp(QMainWindow):
         if state:
             self.restoreState(state)
         
+        # Recent files
+        self.recent_files = settings.value("recentFiles", [])
+        if self.recent_files:
+            # Make sure it's a list
+            if isinstance(self.recent_files, str):
+                self.recent_files = [self.recent_files]
+            
+            # Filter out non-existent files
+            self.recent_files = [f for f in self.recent_files if os.path.exists(f)]
+            
+            # Update the recent files menu
+            self.update_recent_files_menu()
+        
         # Other settings can be loaded here
     
     def save_settings(self):
@@ -923,4 +827,78 @@ class SignalManagerApp(QMainWindow):
         # Window state
         settings.setValue("windowState", self.saveState())
         
+        # Recent files
+        settings.setValue("recentFiles", self.recent_files)
+        
         # Other settings can be saved here
+    
+    # Recent files handling
+    def setup_recent_files_menu(self):
+        """Set up the recent files menu"""
+        # Find the menu bar and file menu
+        menubar = self.findChild(QWidget, "menuBar")
+        if menubar and isinstance(menubar, QWidget):
+            # Find the File menu
+            file_menu = None
+            for action in menubar.actions():
+                if action.text() == "File":
+                    file_menu = action.menu()
+                    break
+            
+            if file_menu:
+                # Check if there's already a Recent Files menu
+                for action in file_menu.actions():
+                    if action.text() == "Recent Files":
+                        self.recent_files_menu = action.menu()
+                        return
+                
+                # Create Recent Files menu if it doesn't exist
+                self.recent_files_menu = file_menu.addMenu("Recent Files")
+                
+                # Add a separator before Recent Files menu
+                file_menu.insertSeparator(self.recent_files_menu.menuAction())
+                
+                # Update the menu with recent files
+                self.update_recent_files_menu()
+    
+    def update_recent_files_menu(self):
+        """Update the recent files menu with the current list of recent files"""
+        if hasattr(self, 'recent_files_menu'):
+            self.recent_files_menu.clear()
+            
+            for file_path in self.recent_files:
+                file_name = os.path.basename(file_path)
+                action = self.recent_files_menu.addAction(file_name)
+                action.setData(file_path)
+                action.triggered.connect(self.on_recent_file_triggered)
+            
+            if self.recent_files:
+                self.recent_files_menu.addSeparator()
+                self.recent_files_menu.addAction("Clear Recent Files").triggered.connect(self.on_clear_recent_files)
+    
+    def add_recent_file(self, file_path):
+        """Add a file to the recent files list"""
+        if file_path in self.recent_files:
+            self.recent_files.remove(file_path)
+        
+        self.recent_files.insert(0, file_path)
+        
+        # Limit the number of recent files
+        if len(self.recent_files) > self.max_recent_files:
+            self.recent_files = self.recent_files[:self.max_recent_files]
+        
+        self.update_recent_files_menu()
+    
+    def on_recent_file_triggered(self):
+        """Handle a recent file being selected from the menu"""
+        action = self.sender()
+        if action and isinstance(action, QAction):
+            file_path = action.data()
+            if file_path and os.path.exists(file_path):
+                if self.maybe_save():
+                    self.load_project(file_path)
+    
+    def on_clear_recent_files(self):
+        """Clear the recent files list"""
+        self.recent_files = []
+        self.update_recent_files_menu()

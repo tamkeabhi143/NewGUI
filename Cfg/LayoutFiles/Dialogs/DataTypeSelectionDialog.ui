@@ -1,0 +1,357 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>DataTypeSelectionDialog</class>
+ <widget class="QDialog" name="DataTypeSelectionDialog">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>500</width>
+    <height>450</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Data Type Selection</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">/* Dark theme stylesheet */
+QDialog, QWidget {
+    background-color: #1e1e1e;
+    color: #f0f0f0;
+}
+
+QLabel {
+    color: #f0f0f0;
+}
+
+QFrame {
+    background-color: #2d2d2d;
+    border-radius: 5px;
+}
+
+QPushButton {
+    background-color: #0d6efd;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+
+QPushButton:hover {
+    background-color: #0b5ed7;
+}
+
+QPushButton:pressed {
+    background-color: #0a58ca;
+}
+
+QTabWidget::pane {
+    border: 1px solid #3d3d3d;
+    background-color: #1e1e1e;
+    border-radius: 5px;
+}
+
+QTabBar::tab {
+    background-color: #2d2d2d;
+    color: #f0f0f0;
+    padding: 8px 16px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    border: 1px solid #3d3d3d;
+    border-bottom: none;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background-color: #0d6efd;
+    color: white;
+}
+
+QTabBar::tab:hover {
+    background-color: #3d3d3d;
+}
+
+QTabBar::tab:selected:hover {
+    background-color: #0b5ed7;
+}
+
+QTreeWidget, QListWidget {
+    background-color: #2d2d2d;
+    alternate-background-color: #363636;
+    border: 1px solid #3d3d3d;
+}
+
+QHeaderView::section {
+    background-color: #3d3d3d;
+    color: #f0f0f0;
+    padding: 5px;
+    border: 1px solid #505050;
+}
+
+QLineEdit, QPlainTextEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    background-color: #363636;
+    border: 1px solid #505050;
+    color: #f0f0f0;
+    padding: 4px;
+    border-radius: 3px;
+}
+
+QLineEdit:focus, QPlainTextEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border: 1px solid #0d6efd;
+}
+
+QDialogButtonBox {
+    background-color: #1e1e1e;
+    border-top: 1px solid #505050;
+    padding-top: 15px;
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="main_layout">
+   <item>
+    <widget class="QGroupBox" name="type_group">
+     <property name="title">
+      <string>Data Type</string>
+     </property>
+     <layout class="QVBoxLayout" name="type_layout">
+      <item>
+       <layout class="QHBoxLayout" name="radio_layout">
+        <item>
+         <widget class="QRadioButton" name="primitive_radio">
+          <property name="text">
+           <string>Primitive Type</string>
+          </property>
+          <property name="checked">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="struct_radio">
+          <property name="text">
+           <string>Structure Type</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="array_radio">
+          <property name="text">
+           <string>Array Type</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QFormLayout" name="form_layout">
+        <item row="0" column="0">
+         <widget class="QLabel" name="type_label">
+          <property name="text">
+           <string>Data Type:</string>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QComboBox" name="type_combo">
+          <item>
+           <property name="text">
+            <string>bool_t</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>uint8</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>uint16</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>uint32</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>uint64</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>sint8</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>sint16</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>sint32</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>sint64</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>char_t</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>float32</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>float64</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="array_layout">
+        <item>
+         <widget class="QLabel" name="array_type_label">
+          <property name="visible">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Array of:</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="array_display">
+          <property name="visible">
+           <bool>false</bool>
+          </property>
+          <property name="readOnly">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="configure_array_button">
+          <property name="visible">
+           <bool>false</bool>
+          </property>
+          <property name="text">
+           <string>Configure...</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <widget class="QGroupBox" name="struct_group">
+     <property name="visible">
+      <bool>false</bool>
+     </property>
+     <property name="title">
+      <string>Structure Definition</string>
+     </property>
+     <layout class="QVBoxLayout" name="struct_layout">
+      <item>
+       <widget class="QLabel" name="struct_fields_label">
+        <property name="text">
+         <string>Structure Fields:</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QTreeWidget" name="struct_fields_tree">
+        <property name="alternatingRowColors">
+         <bool>true</bool>
+        </property>
+        <column>
+         <property name="text">
+          <string>Field Name</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Data Type</string>
+         </property>
+        </column>
+        <column>
+         <property name="text">
+          <string>Description</string>
+         </property>
+        </column>
+       </widget>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="field_buttons_layout">
+        <item>
+         <widget class="QPushButton" name="add_field_button">
+          <property name="text">
+           <string>Add Field</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="edit_field_button">
+          <property name="text">
+           <string>Edit Field</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="remove_field_button">
+          <property name="text">
+           <string>Remove Field</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="button_layout">
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QPushButton" name="ok_button">
+       <property name="text">
+        <string>OK</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="cancel_button">
+       <property name="text">
+        <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
